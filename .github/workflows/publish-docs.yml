@@ -34,8 +34,8 @@ jobs:
         uses: withastro/action@v3
         with:
           path: ${{ env.BUILD_PATH }}
-          node-version: 20 # The specific version of Node that should be used to build your site. Defaults to 20. (optional)
-          package-manager: pnpm@latest # The Node package manager that should be used to install dependencies and build your site.
+          node-version: 22 # The specific version of Node that should be used to build your site. (optional)
+          package-manager: pnpm@10.15.0 # Pinned to match docs/pnpm-lock.yaml (lockfileVersion 9.0); pnpm@latest requires Node >=22.13.
 
   deploy:
     needs: build
