@@ -1,0 +1,74 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 207
+        transfer_encoding: []
+        trailer: {}
+        host: api.techdestination.com
+        remote_addr: ""
+        request_uri: ""
+        body: '{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyZWdpc3RyYXRpb25ObyI6IlotMjUtMTcxNTYvMjUiLCJ0eXBlIjoiY29tcGFueSIsImlhdCI6MTc2MTEzMTM3NywiZXhwIjoxNzY4OTA3Mzc3fQ.fQp_CW9PGmoAesg_1rM-jva6KFON0QhIOSeYmbLGeao"}'
+        form: {}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.techdestination.com/api/verify-certificate
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        transfer_encoding: []
+        trailer: {}
+        content_length: 238
+        uncompressed: false
+        body: '{"message":"Certificate verified successfully","data":{"registrationNo":"Z-25-17156/25","type":"company","iat":1761131377,"exp":1768907377,"name":"OUTSENTIA (PRIVATE) LIMITED","validFrom":"Oct 2025","validTill":"Sep 2026","isValid":true}}'
+        headers:
+            Access-Control-Allow-Credentials:
+                - "true"
+            Connection:
+                - keep-alive
+            Content-Length:
+                - "238"
+            Content-Security-Policy:
+                - 'default-src ''self'';script-src ''self'';script-src-attr ''none'';style-src ''self'' ''unsafe-inline'';img-src ''self'' data: https://portal.techdestination.com https://master.techdestination.com https://portal.pandagizmo.com https://master.pandagizmo.com;connect-src ''self'' wss://portal.techdestination.com wss://master.techdestination.com wss://portal.pandagizmo.com wss://master.pandagizmo.com https://portal.techdestination.com https://master.techdestination.com https://portal.pandagizmo.com https://master.pandagizmo.com;font-src ''self'' data:;object-src ''none'';frame-src ''self'' https://www.youtube.com https://player.vimeo.com;worker-src ''self'';frame-ancestors ''self'' https://portal.techdestination.com https://master.techdestination.com https://portal.pandagizmo.com https://master.pandagizmo.com;base-uri ''self'';form-action ''self'';upgrade-insecure-requests'
+            Content-Type:
+                - application/json; charset=utf-8
+            Cross-Origin-Opener-Policy:
+                - same-origin
+            Cross-Origin-Resource-Policy:
+                - same-origin
+            Date:
+                - Tue, 30 Jun 2026 20:36:45 GMT
+            Etag:
+                - W/"ee-ugsL2xnOQUOP3YLwRsejQdyywfI"
+            Origin-Agent-Cluster:
+                - ?1
+            Referrer-Policy:
+                - no-referrer
+            Server:
+                - nginx/1.24.0 (Ubuntu)
+            Strict-Transport-Security:
+                - max-age=31536000; includeSubDomains
+            Vary:
+                - Origin
+            X-Content-Type-Options:
+                - nosniff
+            X-Dns-Prefetch-Control:
+                - "off"
+            X-Download-Options:
+                - noopen
+            X-Frame-Options:
+                - SAMEORIGIN
+            X-Permitted-Cross-Domain-Policies:
+                - none
+            X-Xss-Protection:
+                - "0"
+        status: 200 OK
+        code: 200
+        duration: 1.030460708s
