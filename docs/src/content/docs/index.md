@@ -9,6 +9,8 @@ description: Read and verify Pakistan Software Export Board (PSEB) registration 
   <img src="https://img.shields.io/github/actions/workflow/status/mistermoe/pseb/integrity.yml?style=flat-square&label=integrity" alt="Integrity">
 </div>
 
+Source Code: <a href="https://github.com/mistermoe/pseb"><img src="https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white" alt="GitHub" style="height: 28px; vertical-align: middle;"></a>
+
 The Pakistan Software Export Board (PSEB) registers IT and IT-enabled services companies and freelancers as software exporters.
 
 Every PSEB registration certificate is issued as a PDF that carries a QR code.
