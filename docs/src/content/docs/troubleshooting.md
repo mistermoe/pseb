@@ -1,7 +1,6 @@
 ---
 title: Troubleshooting
 description: Common issues and solutions when using the pseb library
-slug: 1.0/troubleshooting
 ---
 
 # Troubleshooting

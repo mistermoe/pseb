@@ -27,10 +27,10 @@ export default defineConfig({
 				github: 'https://github.com/mistermoe/pseb',
 			},
 			sidebar: [
-				{ 
-					label: 'Documentation',
-					link: '/'
-				}
+				{ label: 'Getting Started', link: '/' },
+				{ label: 'API Reference', link: '/api' },
+				{ label: 'Examples', link: '/examples' },
+				{ label: 'Troubleshooting', link: '/troubleshooting' },
 			],
 			lastUpdated: true
 		}),

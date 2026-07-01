@@ -1,7 +1,6 @@
 ---
 title: API Reference
 description: Complete API reference for the pseb library
-slug: 1.0/api
 ---
 
 # API Reference

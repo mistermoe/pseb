@@ -1,7 +1,6 @@
 ---
 title: Examples
 description: Practical examples of using the pseb library
-slug: 1.0/examples
 ---
 
 # Examples

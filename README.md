@@ -6,7 +6,16 @@ Read and verify Pakistan Software Export Board (PSEB) registration certificates.
 
 ## Overview
 
-PSEB is the Pakistani government body that registers IT and IT-enabled services companies and freelancers as software exporters. Every PSEB registration certificate is issued as a PDF that carries a QR code. That QR code doesn't just link to a web page: it encodes a verification URL whose final path segment is a signed [JSON Web Token (JWT)](https://datatracker.ietf.org/doc/html/rfc7519). The JWT's claims contain the certificate's core data.
+The Pakistan Software Export Board (PSEB) registers IT and IT-enabled services companies and freelancers as software exporters.
+
+Every PSEB registration certificate is issued as a PDF that carries a QR code.
+
+That QR code encodes a verification URL whose final path segment is a signed [JSON Web Token (JWT)](https://datatracker.ietf.org/doc/html/rfc7519). The JWT's claims contain the certificate's core data:
+
+- the registration number
+- the registration type (company or individual/freelancer)
+- issued-at
+- expires-at
 
 This library lets you:
 
