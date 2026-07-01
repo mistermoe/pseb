@@ -1,6 +1,6 @@
 # pseb
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/mistermoe/pseb.svg)](https://pkg.go.dev/github.com/mistermoe/pseb)
+![Go Badge](https://img.shields.io/badge/Go-00ADD8?logo=go&logoColor=fff&style=flat) [![Go Report Card](https://goreportcard.com/badge/github.com/mistermoe/pseb)](https://goreportcard.com/report/github.com/mistermoe/pseb) [![integrity](https://github.com/mistermoe/pseb/actions/workflows/integrity.yml/badge.svg)](https://github.com/mistermoe/pseb/actions/workflows/integrity.yml)
 
 Read and verify Pakistan Software Export Board (PSEB) registration certificates.
 

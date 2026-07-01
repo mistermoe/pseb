@@ -3,6 +3,12 @@ title: PSEB Certificate Toolkit
 description: Read and verify Pakistan Software Export Board (PSEB) registration certificates
 ---
 
+<div style="display: flex; align-items: center; gap: 4px;">
+  <img src="https://img.shields.io/badge/Go-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go Badge" style="margin-top: 16px">
+  <img src="https://goreportcard.com/badge/github.com/mistermoe/pseb?style=flat-square" alt="Go Report Card">
+  <img src="https://img.shields.io/github/actions/workflow/status/mistermoe/pseb/integrity.yml?style=flat-square&label=integrity" alt="Integrity">
+</div>
+
 The Pakistan Software Export Board (PSEB) registers IT and IT-enabled services companies and freelancers as software exporters.
 
 Every PSEB registration certificate is issued as a PDF that carries a QR code.
