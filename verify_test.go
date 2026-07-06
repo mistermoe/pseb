@@ -1,6 +1,7 @@
 package pseb_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
@@ -33,5 +34,21 @@ func TestVerify(t *testing.T) {
 		assert.True(t, res.IsValid)
 		assert.False(t, res.IssuedAt.IsZero())
 		assert.False(t, res.ExpiresAt.IsZero())
+	})
+}
+
+func TestVerifyInvalid(t *testing.T) {
+	vcr.Test(t, testMode, bootstrap, func(t *testing.T, client *pseb.Client, _ vcr.Cassette) {
+		res, err := client.Verify(t.Context(), sampleJWT)
+
+		// An invalid certificate must surface as an error so callers that only
+		// check err cannot mistake it for a valid one.
+		assert.Error(t, err)
+		assert.True(t, errors.Is(err, pseb.ErrCertificateInvalid))
+
+		// The populated result is still returned for inspection.
+		assert.NotZero(t, res)
+		assert.False(t, res.IsValid)
+		assert.Equal(t, "Z-25-17156/25", res.RegistrationNumber)
 	})
 }

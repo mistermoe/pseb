@@ -1,6 +1,7 @@
 package pseb_test
 
 import (
+	"context"
 	"os"
 	"strings"
 	"testing"
@@ -13,7 +14,7 @@ func TestExtractCertificate(t *testing.T) {
 	pdf, err := os.ReadFile("pseb_cert.pdf")
 	assert.NoError(t, err)
 
-	cert, err := pseb.ExtractCertificate(pdf)
+	cert, err := pseb.ExtractCertificate(context.Background(), pdf)
 	assert.NoError(t, err)
 
 	assert.NotZero(t, cert.JWT)

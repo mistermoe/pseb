@@ -22,7 +22,7 @@ This page covers common issues and their solutions when using the pseb library.
 **Solution:**
 
 ```go
-cert, err := pseb.ExtractCertificate(pdf)
+cert, err := pseb.ExtractCertificate(context.Background(), pdf)
 if err != nil {
     if errors.Is(err, pseb.ErrNoQRCode) {
         // Not a QR-bearing PSEB certificate — fall back to manual review
@@ -119,7 +119,7 @@ client := pseb.New(
 ### Inspect the Extracted Data
 
 ```go
-cert, err := pseb.ExtractCertificate(pdf)
+cert, err := pseb.ExtractCertificate(context.Background(), pdf)
 if err == nil {
     fmt.Printf("URL:          %s\n", cert.PSEBHostedVerificationURL)
     fmt.Printf("Registration: %s\n", cert.RegistrationNumber)
@@ -156,7 +156,7 @@ The JWT is a standard token — you can paste `cert.JWT` into any JWT decoder to
 **A:** Match the sentinel errors returned by `ExtractCertificate`:
 
 ```go
-cert, err := pseb.ExtractCertificate(pdf)
+cert, err := pseb.ExtractCertificate(context.Background(), pdf)
 if errors.Is(err, pseb.ErrNoQRCode) || errors.Is(err, pseb.ErrNoJWT) {
     // Not a QR-bearing PSEB certificate
 }

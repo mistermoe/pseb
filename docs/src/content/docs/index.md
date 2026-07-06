@@ -9,6 +9,8 @@ description: Read and verify Pakistan Software Export Board (PSEB) registration 
   <img src="https://img.shields.io/github/actions/workflow/status/mistermoe/pseb/integrity.yml?style=flat-square&label=integrity" alt="Integrity">
 </div>
 
+Source Code: <a href="https://github.com/mistermoe/pseb"><img src="https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white" alt="GitHub" style="height: 28px; vertical-align: middle;"></a>
+
 The Pakistan Software Export Board (PSEB) registers IT and IT-enabled services companies and freelancers as software exporters.
 
 Every PSEB registration certificate is issued as a PDF that carries a QR code.
@@ -60,7 +62,7 @@ func main() {
 	}
 
 	// Extract the QR code and decode the JWT it carries.
-	cert, err := pseb.ExtractCertificate(pdf)
+	cert, err := pseb.ExtractCertificate(context.Background(), pdf)
 	if err != nil {
 		log.Fatalf("failed to extract certificate: %v", err)
 	}
@@ -82,10 +84,14 @@ func main() {
 
 ### `ExtractCertificate`
 
-Reads a PSEB certificate PDF, decodes the QR code printed on it, and returns the [`Certificate`](/api#certificate) it encodes. The images embedded in the PDF are extracted, the first one that is a readable QR code is decoded, the verification URL is parsed to recover the JWT, and the JWT's claims are decoded to populate the registration number, type, and timestamps.
+Reads a PSEB certificate PDF, decodes the QR code printed on it, and returns the [`UnverifiedCertificate`](/api#unverifiedcertificate) it encodes. The images embedded in the PDF are extracted, the first one that is a readable QR code is decoded, the verification URL is parsed to recover the JWT, and the JWT's claims are decoded to populate the registration number, type, and timestamps.
 
 ```go
-import "github.com/mistermoe/pseb"
+import (
+	"context"
+
+	"github.com/mistermoe/pseb"
+)
 
 func main() {
 	pdf, err := os.ReadFile("pseb_cert.pdf")
@@ -93,7 +99,7 @@ func main() {
 		log.Fatalf("failed to read certificate: %v", err)
 	}
 
-	cert, err := pseb.ExtractCertificate(pdf)
+	cert, err := pseb.ExtractCertificate(context.Background(), pdf)
 	if err != nil {
 		log.Fatalf("failed to extract certificate: %v", err)
 	}

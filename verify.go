@@ -2,6 +2,7 @@ package pseb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -17,6 +18,16 @@ const DefaultBaseURL = "https://api.techdestination.com"
 // verifyPath is the PSEB portal endpoint that verifies a certificate JWT.
 const verifyPath = "/api/verify-certificate"
 
+// defaultTimeout bounds a [Client]'s HTTP requests so callers using a context
+// without a deadline do not hang indefinitely if the PSEB portal is unreachable.
+const defaultTimeout = 15 * time.Second
+
+// ErrCertificateInvalid is returned by [Client.Verify] when the PSEB portal
+// reports that a certificate is not valid (revoked, expired, or unrecognized).
+// The accompanying [VerificationResult] is still returned so callers can inspect
+// the reported details.
+var ErrCertificateInvalid = errors.New("certificate is invalid or expired")
+
 // Client verifies PSEB certificates against the PSEB portal's verification
 // endpoint. It is safe for concurrent use and should be reused across calls.
 type Client struct {
@@ -30,14 +41,17 @@ type Client struct {
 // different host or httpr.HTTPClient(...) to supply a custom *http.Client (e.g.
 // one with a timeout, or a recording transport in tests).
 func New(opts ...httpr.ClientOption) *Client {
-	defaults := []httpr.ClientOption{httpr.BaseURL(DefaultBaseURL)}
+	defaults := []httpr.ClientOption{
+		httpr.BaseURL(DefaultBaseURL),
+		httpr.Timeout(defaultTimeout),
+	}
 
 	return &Client{http: httpr.NewClient(append(defaults, opts...)...)}
 }
 
 // VerificationResult is the certificate data the PSEB portal returns when a
 // certificate JWT is verified. Unlike the claims read locally from the JWT in
-// [Certificate], these values are reported by PSEB and include the registered
+// [UnverifiedCertificate], these values are reported by PSEB and include the registered
 // entity's name and an authoritative validity flag.
 type VerificationResult struct {
 	// RegistrationNumber is the PSEB registration number of the holder,
@@ -83,14 +97,17 @@ type verifyEnvelope struct {
 // certificate data the portal reports for it.
 //
 // The token is the compact JWT extracted from a certificate's QR code (see
-// [Certificate.JWT]). Verify first checks that the token is a well-formed JWT,
+// [UnverifiedCertificate.JWT]). Verify first checks that the token is a well-formed JWT,
 // then POSTs it to the portal's verification endpoint. Because PSEB certificates
 // are signed with a secret only PSEB holds, this network call is what
 // authoritatively establishes a certificate's authenticity and validity; the
 // returned [VerificationResult.IsValid] reflects PSEB's own determination.
 //
 // It returns an error if the token is not a valid JWT, if the request fails, or
-// if the portal responds with a non-2xx status.
+// if the portal responds with a non-2xx status. If the portal reports the
+// certificate as not valid, Verify returns the populated [VerificationResult]
+// together with [ErrCertificateInvalid] so the invalid result cannot be mistaken
+// for a valid one by callers that only check the error.
 func (c *Client) Verify(ctx context.Context, token string) (*VerificationResult, error) {
 	if _, err := jwt.Decode(token); err != nil {
 		return nil, fmt.Errorf("invalid PSEB certificate JWT: %w", err)
@@ -117,12 +134,18 @@ func (c *Client) Verify(ctx context.Context, token string) (*VerificationResult,
 
 	data := envelope.Data
 
-	return &VerificationResult{
+	result := &VerificationResult{
 		RegistrationNumber: data.RegistrationNo,
 		Type:               CertificateType(data.Type),
 		Name:               data.Name,
 		IssuedAt:           time.Unix(data.IAT, 0).UTC(),
 		ExpiresAt:          time.Unix(data.EXP, 0).UTC(),
 		IsValid:            data.IsValid,
-	}, nil
+	}
+
+	if !data.IsValid {
+		return result, ErrCertificateInvalid
+	}
+
+	return result, nil
 }

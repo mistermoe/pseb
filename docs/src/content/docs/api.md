@@ -9,14 +9,14 @@ The pseb library provides a small, clean API for reading and verifying Pakistan 
 
 ## Extraction
 
-### `ExtractCertificate(pdf []byte) (*Certificate, error)`
+### `ExtractCertificate(ctx context.Context, pdf []byte) (*UnverifiedCertificate, error)`
 
-Reads a PSEB certificate PDF, decodes the QR code printed on it, and returns the [`Certificate`](#certificate) it encodes.
+Reads a PSEB certificate PDF, decodes the QR code printed on it, and returns the [`UnverifiedCertificate`](#unverifiedcertificate) it encodes. Only the certificate's first page is inspected, and `ctx` can be used to cancel a stalled parse.
 
 ```go
 pdf, _ := os.ReadFile("pseb_cert.pdf")
 
-cert, err := pseb.ExtractCertificate(pdf)
+cert, err := pseb.ExtractCertificate(context.Background(), pdf)
 if err != nil {
     log.Fatalf("failed to extract certificate: %v", err)
 }
@@ -24,12 +24,13 @@ if err != nil {
 
 **Parameters:**
 
+* `ctx`: Context for cancelling a stalled parse
 * `pdf`: The raw bytes of a PSEB certificate PDF
 
 **Returns:**
 
-* `*Certificate`: The extracted certificate data (verification URL, JWT, and decoded claims)
-* `error`: [`ErrNoQRCode`](#errors) if no QR code can be decoded, [`ErrNoJWT`](#errors) if the QR code does not contain a JWT, or a decode error for a malformed token
+* `*UnverifiedCertificate`: The extracted certificate data (verification URL, JWT, and decoded claims)
+* `error`: [`ErrNoQRCode`](#errors) if no QR code can be decoded, [`ErrNoJWT`](#errors) if the QR code does not contain a JWT, [`ErrInsecureAlgorithm`](#errors) if the JWT header declares no or the `none` algorithm, or a decode error for a malformed token
 
 :::note
 The JWT signature is not checked during extraction. Use [`Verify`](#verify) to confirm a certificate's authenticity and current validity with PSEB.
@@ -66,7 +67,7 @@ result, err := client.Verify(ctx, cert.JWT)
 **Parameters:**
 
 * `ctx`: Context for request cancellation and timeouts
-* `token`: The compact JWT extracted from a certificate's QR code (see [`Certificate.JWT`](#certificate))
+* `token`: The compact JWT extracted from a certificate's QR code (see [`UnverifiedCertificate.JWT`](#unverifiedcertificate))
 
 **Returns:**
 
@@ -75,12 +76,16 @@ result, err := client.Verify(ctx, cert.JWT)
 
 ## Data Types
 
-### `Certificate`
+### `UnverifiedCertificate`
 
 Contains the data extracted from a certificate PDF's QR code. These values come from the QR's verification URL and the JWT's claims; they are not independently verified.
 
+:::caution
+The JWT signature is **NOT** verified during extraction because PSEB uses a symmetric secret. Do **NOT** use this data for authorization without passing the JWT to [`Verify`](#verify).
+:::
+
 ```go
-type Certificate struct {
+type UnverifiedCertificate struct {
     // The URL encoded in the certificate's QR code. Points at the PSEB
     // portal's public verification page and embeds the JWT as its final
     // path segment.
@@ -106,7 +111,7 @@ type Certificate struct {
 
 ### `VerificationResult`
 
-The certificate data the PSEB portal returns when a certificate JWT is verified. Unlike [`Certificate`](#certificate), these values are reported by PSEB and include the registered entity's name and an authoritative validity flag.
+The certificate data the PSEB portal returns when a certificate JWT is verified. Unlike [`UnverifiedCertificate`](#unverifiedcertificate), these values are reported by PSEB and include the registered entity's name and an authoritative validity flag.
 
 ```go
 type VerificationResult struct {
@@ -171,17 +176,23 @@ var (
     // Returned when the QR code was decoded but does not contain a
     // JWT-shaped token.
     ErrNoJWT = errors.New("no JWT found in QR code")
+
+    // Returned when the JWT header declares no algorithm or the "none"
+    // algorithm, which cannot be trusted.
+    ErrInsecureAlgorithm = errors.New("token header specifies 'none' or empty algorithm")
 )
 ```
 
 ```go
-cert, err := pseb.ExtractCertificate(pdf)
+cert, err := pseb.ExtractCertificate(context.Background(), pdf)
 if err != nil {
     switch {
     case errors.Is(err, pseb.ErrNoQRCode):
         log.Println("this PDF has no QR code")
     case errors.Is(err, pseb.ErrNoJWT):
         log.Println("the QR code does not contain a JWT")
+    case errors.Is(err, pseb.ErrInsecureAlgorithm):
+        log.Println("the JWT uses an insecure algorithm")
     default:
         log.Printf("failed to extract certificate: %v", err)
     }

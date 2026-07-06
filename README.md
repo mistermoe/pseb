@@ -61,7 +61,7 @@ func main() {
 	}
 
 	// Extract the QR code and decode the JWT it carries (offline).
-	cert, err := pseb.ExtractCertificate(pdf)
+	cert, err := pseb.ExtractCertificate(context.Background(), pdf)
 	if err != nil {
 		log.Fatalf("failed to extract certificate: %v", err)
 	}
@@ -83,11 +83,11 @@ func main() {
 
 ## API
 
-### `ExtractCertificate(pdf []byte) (*Certificate, error)`
+### `ExtractCertificate(ctx context.Context, pdf []byte) (*UnverifiedCertificate, error)`
 
-Reads a PSEB certificate PDF, decodes the QR code printed on it, and returns the `Certificate` it encodes. It extracts the images embedded in the PDF, decodes the first one that is a readable QR code, parses the verification URL to recover the JWT, and decodes the JWT's claims. Extraction is fully offline; the JWT signature is not checked here.
+Reads a PSEB certificate PDF, decodes the QR code printed on it, and returns the `UnverifiedCertificate` it encodes. It extracts the images embedded in the PDF, decodes the first one that is a readable QR code, parses the verification URL to recover the JWT, and decodes the JWT's claims. Extraction is fully offline; the JWT signature is not checked here.
 
-Returns `ErrNoQRCode` if no QR code can be decoded, or `ErrNoJWT` if the decoded QR code does not contain a JWT.
+Returns `ErrNoQRCode` if no QR code can be decoded, `ErrNoJWT` if the decoded QR code does not contain a JWT, or `ErrInsecureAlgorithm` if the JWT header declares no algorithm or the `none` algorithm.
 
 ### `New(opts ...httpr.ClientOption) *Client`
 
@@ -100,7 +100,10 @@ Submits a certificate JWT to the PSEB portal and returns the certificate data th
 ### Types
 
 ```go
-type Certificate struct {
+// UnverifiedCertificate contains claims extracted locally from a PSEB certificate's QR code.
+// WARNING: The JWT signature is NOT verified during extraction because PSEB uses a symmetric secret.
+// Do NOT use this data for authorization without passing the JWT to Client.Verify().
+type UnverifiedCertificate struct {
 	PSEBHostedVerificationURL string          `json:"pseb_hosted_verification_url"`
 	JWT                       string          `json:"jwt"`
 	RegistrationNumber        string          `json:"registration_number"`

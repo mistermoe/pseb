@@ -30,7 +30,7 @@
 // # Extracting from a PDF
 //
 //	pdf, _ := os.ReadFile("pseb_cert.pdf")
-//	cert, err := pseb.ExtractCertificate(pdf)
+//	cert, err := pseb.ExtractCertificate(ctx, pdf)
 //	if err != nil {
 //		// no QR code, no JWT, or malformed token
 //	}

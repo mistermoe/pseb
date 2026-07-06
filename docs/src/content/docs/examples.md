@@ -15,6 +15,7 @@ This page provides practical examples of using the pseb library for various use 
 package main
 
 import (
+    "context"
     "fmt"
     "log"
     "os"
@@ -28,7 +29,7 @@ func main() {
         log.Fatalf("failed to read certificate: %v", err)
     }
 
-    cert, err := pseb.ExtractCertificate(pdf)
+    cert, err := pseb.ExtractCertificate(context.Background(), pdf)
     if err != nil {
         log.Fatalf("failed to extract certificate: %v", err)
     }
@@ -89,7 +90,7 @@ func main() {
     }
 
     // Read the JWT out of the PDF's QR code.
-    cert, err := pseb.ExtractCertificate(pdf)
+    cert, err := pseb.ExtractCertificate(context.Background(), pdf)
     if err != nil {
         log.Fatalf("failed to extract certificate: %v", err)
     }
@@ -117,6 +118,7 @@ func main() {
 package main
 
 import (
+    "context"
     "fmt"
     "log"
     "os"
@@ -127,7 +129,7 @@ import (
 func main() {
     pdf, _ := os.ReadFile("pseb_cert.pdf")
 
-    cert, err := pseb.ExtractCertificate(pdf)
+    cert, err := pseb.ExtractCertificate(context.Background(), pdf)
     if err != nil {
         log.Fatalf("failed to extract certificate: %v", err)
     }
@@ -149,6 +151,7 @@ func main() {
 package main
 
 import (
+    "context"
     "fmt"
     "log"
     "os"
@@ -160,7 +163,7 @@ import (
 func main() {
     pdf, _ := os.ReadFile("pseb_cert.pdf")
 
-    cert, err := pseb.ExtractCertificate(pdf)
+    cert, err := pseb.ExtractCertificate(context.Background(), pdf)
     if err != nil {
         log.Fatalf("failed to extract certificate: %v", err)
     }
@@ -184,6 +187,7 @@ Local expiry is a claim from the JWT and is not authoritative. For a definitive 
 package main
 
 import (
+    "context"
     "encoding/json"
     "fmt"
     "log"
@@ -195,7 +199,7 @@ import (
 func main() {
     pdf, _ := os.ReadFile("pseb_cert.pdf")
 
-    cert, err := pseb.ExtractCertificate(pdf)
+    cert, err := pseb.ExtractCertificate(context.Background(), pdf)
     if err != nil {
         log.Fatalf("failed to extract certificate: %v", err)
     }
@@ -217,6 +221,7 @@ func main() {
 package main
 
 import (
+    "context"
     "errors"
     "fmt"
     "log"
@@ -228,7 +233,7 @@ import (
 func main() {
     pdf, _ := os.ReadFile("some_document.pdf")
 
-    cert, err := pseb.ExtractCertificate(pdf)
+    cert, err := pseb.ExtractCertificate(context.Background(), pdf)
     if err != nil {
         switch {
         case errors.Is(err, pseb.ErrNoQRCode):

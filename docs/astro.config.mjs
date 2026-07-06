@@ -7,7 +7,7 @@ export default defineConfig({
 	base: import.meta.env.DEV ? '/' : '/pseb',
 	integrations: [
 		starlight({
-			title: 'pseb',
+			title: 'pseb 🇵🇰',
 			customCss: [
 				'@fontsource/lato/index.css',
 				'@fontsource/lato/100.css',

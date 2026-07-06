@@ -2,6 +2,7 @@ package pseb
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"image"
@@ -38,11 +39,10 @@ const (
 	CertificateTypeIndividual CertificateType = "individual"
 )
 
-// Certificate is a PSEB registration certificate as read from the QR code
-// printed on the certificate PDF. The fields below come from the QR's
-// verification URL and the claims of the signed JWT it carries; they are not
-// independently verified (see [Client.Verify] for that).
-type Certificate struct {
+// UnverifiedCertificate contains claims extracted locally from a PSEB certificate's QR code.
+// WARNING: The JWT signature is NOT verified during extraction because PSEB uses a symmetric secret.
+// Do NOT use this data for authorization without passing the JWT to Client.Verify().
+type UnverifiedCertificate struct {
 	// PSEBHostedVerificationURL is the URL encoded in the certificate's QR code.
 	// It points at the PSEB portal's public verification page for this
 	// certificate and embeds the JWT as its final path segment, e.g.
@@ -72,6 +72,11 @@ type Certificate struct {
 	ExpiresAt time.Time `json:"expires_at"`
 }
 
+// psebVerificationHost is the host that appears in a PSEB certificate's QR-code
+// verification URL. It is used to distinguish the certificate QR code from any
+// unrelated QR codes that may be present in the PDF.
+const psebVerificationHost = "portal.techdestination.com"
+
 var (
 	// ErrNoQRCode is returned by [ExtractCertificate] when the PDF contains no
 	// image that decodes as a QR code.
@@ -79,10 +84,14 @@ var (
 	// ErrNoJWT is returned by [ExtractCertificate] when the QR code was decoded
 	// but does not contain a JWT-shaped token.
 	ErrNoJWT = errors.New("no JWT found in QR code")
+	// ErrInsecureAlgorithm is returned by [ExtractCertificate] when the JWT
+	// header declares no algorithm or the "none" algorithm, which cannot be
+	// trusted and defends against algorithm-confusion attacks.
+	ErrInsecureAlgorithm = errors.New("token header specifies 'none' or empty algorithm")
 )
 
 // ExtractCertificate reads a PSEB certificate PDF, decodes the QR code printed
-// on it, and returns the [Certificate] it encodes.
+// on it, and returns the [UnverifiedCertificate] it encodes.
 //
 // It extracts the images embedded in the PDF, decodes the first one that is a
 // readable QR code, parses the verification URL to capture the JWT, and decodes
@@ -90,10 +99,15 @@ var (
 // The JWT signature is not checked here; use [Client.Verify] to confirm a
 // certificate's authenticity and current validity with PSEB.
 //
-// It returns [ErrNoQRCode] if no QR code can be decoded from the PDF, or
-// [ErrNoJWT] if the decoded QR code does not contain a JWT.
-func ExtractCertificate(pdf []byte) (*Certificate, error) {
-	qrText, err := decodeQRFromPDF(pdf)
+// Only the certificate's first page is inspected. The provided ctx can be used
+// to cancel a stalled parse; its error is returned if it is cancelled while
+// images are being decoded.
+//
+// It returns [ErrNoQRCode] if no QR code can be decoded from the PDF,
+// [ErrNoJWT] if the decoded QR code does not contain a JWT, or
+// [ErrInsecureAlgorithm] if the JWT header declares no or the "none" algorithm.
+func ExtractCertificate(ctx context.Context, pdf []byte) (*UnverifiedCertificate, error) {
+	qrText, err := decodeQRFromPDF(ctx, pdf)
 	if err != nil {
 		return nil, err
 	}
@@ -108,33 +122,67 @@ func ExtractCertificate(pdf []byte) (*Certificate, error) {
 		return nil, fmt.Errorf("failed to decode JWT: %w", err)
 	}
 
-	registrationNumber, _ := decoded.Claims.Misc["registrationNo"].(string)
-	certType, _ := decoded.Claims.Misc["type"].(string)
+	if alg := strings.ToLower(decoded.Header.ALG); alg == "" || alg == "none" {
+		return nil, ErrInsecureAlgorithm
+	}
 
-	return &Certificate{
+	registrationNumber, ok := decoded.Claims.Misc["registrationNo"].(string)
+	if !ok || registrationNumber == "" {
+		return nil, fmt.Errorf("missing required claim: registrationNo")
+	}
+
+	certType, ok := decoded.Claims.Misc["type"].(string)
+	if !ok || certType == "" {
+		return nil, fmt.Errorf("missing required claim: type")
+	}
+
+	// Leave timestamps as the zero Time when the claim is absent rather than
+	// mapping a 0 epoch to 1970, which would misrepresent a missing value.
+	var issuedAt, expiresAt time.Time
+	if decoded.Claims.IssuedAt != 0 {
+		issuedAt = time.Unix(decoded.Claims.IssuedAt, 0).UTC()
+	}
+	if decoded.Claims.Expiration != 0 {
+		expiresAt = time.Unix(decoded.Claims.Expiration, 0).UTC()
+	}
+
+	return &UnverifiedCertificate{
 		PSEBHostedVerificationURL: verificationURL,
 		JWT:                       token,
 		RegistrationNumber:        registrationNumber,
 		Type:                      CertificateType(certType),
-		IssuedAt:                  time.Unix(decoded.Claims.IssuedAt, 0).UTC(),
-		ExpiresAt:                 time.Unix(decoded.Claims.Expiration, 0).UTC(),
+		IssuedAt:                  issuedAt,
+		ExpiresAt:                 expiresAt,
 	}, nil
 }
 
-// decodeQRFromPDF extracts every image from the PDF and returns the text of the
-// first one that decodes as a QR code.
-func decodeQRFromPDF(pdf []byte) (string, error) {
+// decodeQRFromPDF extracts the images from the PDF's first page and returns the
+// text of the first one that decodes as a QR code.
+func decodeQRFromPDF(ctx context.Context, pdf []byte) (string, error) {
 	conf := model.NewDefaultConfiguration()
 
-	pages, err := api.ExtractImagesRaw(bytes.NewReader(pdf), nil, conf)
+	// PSEB certificates are strictly one page; restricting extraction to page 1
+	// prevents multi-page collection bombs.
+	pages, err := api.ExtractImagesRaw(bytes.NewReader(pdf), []string{"1"}, conf)
 	if err != nil {
 		return "", fmt.Errorf("failed to extract images from PDF: %w", err)
 	}
 
 	for _, page := range pages {
 		for _, img := range page {
+			if err := ctx.Err(); err != nil {
+				return "", err
+			}
+
 			text, ok := decodeQRFromImage(img)
-			if ok {
+			if !ok {
+				continue
+			}
+
+			// Map iteration order is non-deterministic, so a PDF with several
+			// QR codes could otherwise yield a different result each run. Only
+			// accept the QR that carries a PSEB verification URL.
+			if strings.Contains(text, psebVerificationHost) {
 				return text, nil
 			}
 		}
@@ -149,7 +197,14 @@ func decodeQRFromImage(img model.Image) (string, bool) {
 		return "", false
 	}
 
-	raw, err := io.ReadAll(img)
+	// Prevent Pixel Flood bombs (e.g., max 4000x4000 = 16M pixels).
+	if img.Width*img.Height > 16_000_000 {
+		return "", false // Skip maliciously oversized images
+	}
+
+	// 10MB limit to prevent decompression bombs.
+	lr := io.LimitReader(img, 10*1024*1024)
+	raw, err := io.ReadAll(lr)
 	if err != nil {
 		return "", false
 	}
