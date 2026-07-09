@@ -274,10 +274,10 @@ func writeTempFile(pattern string, data []byte) (path string, cleanup func(), er
 		return "", nil, err
 	}
 
-	cleanup = func() { os.Remove(f.Name()) }
+	cleanup = func() { _ = os.Remove(f.Name()) }
 
 	if _, err := f.Write(data); err != nil {
-		f.Close()
+		_ = f.Close()
 		cleanup()
 
 		return "", nil, err
