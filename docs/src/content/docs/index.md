@@ -5,7 +5,7 @@ description: Read and verify Pakistan Software Export Board (PSEB) registration 
 
 <div style="display: flex; align-items: center; gap: 4px;">
   <img src="https://img.shields.io/badge/Go-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go Badge" style="margin-top: 16px">
-  <img src="https://goreportcard.com/badge/github.com/mistermoe/pseb?style=flat-square" alt="Go Report Card">
+  <a href="https://golangci-lint.run"><img src="https://img.shields.io/badge/golangci--lint-enabled-brightgreen?style=flat-square&logo=go&logoColor=white" alt="golangci-lint"></a>
   <img src="https://img.shields.io/github/actions/workflow/status/mistermoe/pseb/integrity.yml?style=flat-square&label=integrity" alt="Integrity">
 </div>
 
