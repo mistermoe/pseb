@@ -7,12 +7,15 @@
 // code does not just link to a web page: it encodes a verification URL whose
 // final path segment is a signed JSON Web Token (JWT). The JWT's claims contain
 // the certificate's core data: the registration number, the registration type
-// (company or individual/freelancer), and issued-at / expiry timestamps.
+// (company or freelancer), and issued-at / expiry timestamps.
 //
-// This package provides two things:
+// This package provides three things:
 //
 //   - ExtractCertificate reads the QR code out of a certificate PDF and returns
 //     the encoded verification URL, the raw JWT, and the claims decoded from it.
+//   - ExtractCNIC reads the holder's 13-digit CNIC from a certificate PDF's text
+//     layer. The CNIC is printed on freelancer certificates but is not
+//     carried in the QR code, the JWT claims, or the verification response.
 //   - Client.Verify submits a JWT to the PSEB portal's verification endpoint and
 //     returns the certificate data the portal reports for it, including the
 //     registered entity's name and whether the certificate is currently valid.
@@ -34,7 +37,16 @@
 //	if err != nil {
 //		// no QR code, no JWT, or malformed token
 //	}
-//	fmt.Println(cert.RegistrationNumber, cert.Type, cert.ExpiresAt)
+//	fmt.Println(cert.RegistrationNumber, cert.Type, cert.JWTExpiresAt)
+//
+// # Reading the CNIC
+//
+//	pdf, _ := os.ReadFile("pseb_freelancer_cert.pdf")
+//	cnic, err := pseb.ExtractCNIC(pdf)
+//	if err != nil {
+//		// no CNIC in the PDF's text layer
+//	}
+//	fmt.Println(cnic) // 3520122720739
 //
 // # Verifying against the PSEB portal
 //

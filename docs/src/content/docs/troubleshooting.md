@@ -19,6 +19,8 @@ This page covers common issues and their solutions when using the pseb library.
 * The certificate is an older format without a QR code
 * The PDF is a scan/photo where the QR code did not survive as a decodable image
 
+The tiny, full-bleed QR raster PSEB embeds is *not* a cause: `ExtractCertificate` reconstructs the QR's module grid when a direct decode fails, so that case is handled automatically (see [QR decoding strategy](/api#qr-decoding-strategy)). `ErrNoQRCode` therefore means no QR-shaped image could be decoded at all — most often because the input isn't a QR-bearing PSEB certificate. The reconstruction assumes the QR fills its image and is upright; a heavily rotated or cropped scan can still defeat it.
+
 **Solution:**
 
 ```go
@@ -125,7 +127,7 @@ if err == nil {
     fmt.Printf("Registration: %s\n", cert.RegistrationNumber)
     fmt.Printf("Type:         %s\n", cert.Type)
     fmt.Printf("Issued:       %s\n", cert.IssuedAt.Format("2006-01-02"))
-    fmt.Printf("Expires:      %s\n", cert.ExpiresAt.Format("2006-01-02"))
+    fmt.Printf("JWT expiry:   %s\n", cert.JWTExpiresAt.Format("2006-01-02"))
 }
 ```
 
@@ -147,9 +149,9 @@ The JWT is a standard token — you can paste `cert.JWT` into any JWT decoder to
 
 **A:** `ExtractCertificate` returns claims read locally from the JWT (registration number, type, issued/expiry dates). `Verify` returns data reported by PSEB, which additionally includes the registered entity's `Name` and an authoritative `IsValid` flag.
 
-### Q: The registration type isn't `company` or `individual`. Why?
+### Q: The registration type isn't `company` or `freelancer`. Why?
 
-**A:** `CertificateType` mirrors the `type` claim verbatim. If PSEB introduces a new type (or uses a different label such as `freelancer`), the value will be preserved as-is even though it won't match the predefined constants.
+**A:** `CertificateType` mirrors the `type` claim verbatim. If PSEB introduces a new type or uses a different label, the value will be preserved as-is even though it won't match the predefined constants.
 
 ### Q: How do I handle a PDF that isn't a PSEB certificate?
 
