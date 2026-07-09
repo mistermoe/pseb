@@ -2,13 +2,21 @@ package pseb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/mistermoe/httpr"
 	"github.com/mistermoe/jose/jwt"
 )
+
+// ErrCertificateInvalid is returned by [Client.Verify] when the PSEB portal
+// reports that the certificate is not valid (its "isValid" flag is false). The
+// accompanying [VerificationResult] is still returned and populated so callers
+// can inspect the details PSEB reported.
+var ErrCertificateInvalid = errors.New("PSEB reports certificate is not valid")
 
 // DefaultBaseURL is the base URL of the PSEB portal API used to verify
 // certificates. It is the default host a [Client] created with [New] targets.
@@ -44,7 +52,7 @@ type VerificationResult struct {
 	// e.g. "Z-25-17156/25".
 	RegistrationNumber string `json:"registration_number"`
 
-	// Type is the registration type (company or individual/freelancer).
+	// Type is the registration type (company or freelancer).
 	Type CertificateType `json:"type"`
 
 	// Name is the registered name of the software exporter as recorded by PSEB,
@@ -52,13 +60,33 @@ type VerificationResult struct {
 	// present in the certificate JWT and is only available via verification.
 	Name string `json:"name"`
 
-	// IssuedAt is when PSEB issued the certificate (from the "iat" claim),
-	// normalized to UTC.
+	// IssuedAt is the JWT "iat" (issued-at) timestamp, normalized to UTC. Note
+	// this is when the certificate's token was issued, which may differ from the
+	// start of the registration's validity window (see ValidFrom).
 	IssuedAt time.Time `json:"issued_at"`
 
-	// ExpiresAt is when the certificate expires (from the "exp" claim),
-	// normalized to UTC.
-	ExpiresAt time.Time `json:"expires_at"`
+	// JWTExpiresAt is the JWT "exp" timestamp, normalized to UTC. This is the
+	// expiry of the certificate's verification token (PSEB issues it with a
+	// short, ~90-day lifetime), NOT the end of the registration's validity
+	// period. For the registration's actual expiry use RegistrationExpiresAt.
+	JWTExpiresAt time.Time `json:"jwt_expires_at"`
+
+	// ValidFrom is the start of the registration's validity window as reported
+	// by PSEB, a coarse human-readable label such as "May 2026". It is empty if
+	// the portal did not report it.
+	ValidFrom string `json:"valid_from"`
+
+	// ValidTill is the end of the registration's validity window as reported by
+	// PSEB, a coarse human-readable label such as "Apr 2027". This is the
+	// certificate's real expiry (distinct from the token's JWTExpiresAt) and is
+	// empty if the portal did not report it.
+	ValidTill string `json:"valid_till"`
+
+	// RegistrationExpiresAt is ValidTill parsed into a timestamp, normalized to
+	// UTC. PSEB only reports month granularity, so this is set to the first
+	// instant of the reported month (e.g. "Apr 2027" becomes 2027-04-01
+	// 00:00:00 UTC). It is the zero time if ValidTill is empty or unparseable.
+	RegistrationExpiresAt time.Time `json:"registration_expires_at"`
 
 	// IsValid reports whether PSEB considers the certificate currently valid.
 	// This is the authoritative validity signal: it reflects PSEB's own check
@@ -75,8 +103,26 @@ type verifyEnvelope struct {
 		Name           string `json:"name"`
 		IAT            int64  `json:"iat"`
 		EXP            int64  `json:"exp"`
+		ValidFrom      string `json:"validFrom"`
+		ValidTill      string `json:"validTill"`
 		IsValid        bool   `json:"isValid"`
 	} `json:"data"`
+}
+
+// validityMonthLayout is the "Mon YYYY" format PSEB uses for the validFrom and
+// validTill fields, e.g. "Apr 2027".
+const validityMonthLayout = "Jan 2006"
+
+// parseValidityMonth parses a PSEB "Mon YYYY" validity label (e.g. "Apr 2027")
+// into the first instant of that month in UTC. It returns the zero time if s is
+// empty or not in the expected format, since the field is coarse and best-effort.
+func parseValidityMonth(s string) time.Time {
+	t, err := time.Parse(validityMonthLayout, strings.TrimSpace(s))
+	if err != nil {
+		return time.Time{}
+	}
+
+	return t.UTC()
 }
 
 // Verify submits a PSEB certificate JWT to the PSEB portal and returns the
@@ -90,7 +136,10 @@ type verifyEnvelope struct {
 // returned [VerificationResult.IsValid] reflects PSEB's own determination.
 //
 // It returns an error if the token is not a valid JWT, if the request fails, or
-// if the portal responds with a non-2xx status.
+// if the portal responds with a non-2xx status. If the portal responds
+// successfully but reports the certificate as not valid, Verify returns the
+// populated result together with [ErrCertificateInvalid]; match it with
+// errors.Is to distinguish an invalid certificate from a transport failure.
 func (c *Client) Verify(ctx context.Context, token string) (*VerificationResult, error) {
 	if _, err := jwt.Decode(token); err != nil {
 		return nil, fmt.Errorf("invalid PSEB certificate JWT: %w", err)
@@ -117,12 +166,21 @@ func (c *Client) Verify(ctx context.Context, token string) (*VerificationResult,
 
 	data := envelope.Data
 
-	return &VerificationResult{
-		RegistrationNumber: data.RegistrationNo,
-		Type:               CertificateType(data.Type),
-		Name:               data.Name,
-		IssuedAt:           time.Unix(data.IAT, 0).UTC(),
-		ExpiresAt:          time.Unix(data.EXP, 0).UTC(),
-		IsValid:            data.IsValid,
-	}, nil
+	result := &VerificationResult{
+		RegistrationNumber:    data.RegistrationNo,
+		Type:                  CertificateType(data.Type),
+		Name:                  data.Name,
+		IssuedAt:              time.Unix(data.IAT, 0).UTC(),
+		JWTExpiresAt:          time.Unix(data.EXP, 0).UTC(),
+		ValidFrom:             data.ValidFrom,
+		ValidTill:             data.ValidTill,
+		RegistrationExpiresAt: parseValidityMonth(data.ValidTill),
+		IsValid:               data.IsValid,
+	}
+
+	if !result.IsValid {
+		return result, ErrCertificateInvalid
+	}
+
+	return result, nil
 }

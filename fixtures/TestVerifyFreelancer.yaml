@@ -6,13 +6,13 @@ interactions:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 207
+        content_length: 220
         transfer_encoding: []
         trailer: {}
         host: api.techdestination.com
         remote_addr: ""
         request_uri: ""
-        body: '{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyZWdpc3RyYXRpb25ObyI6IlotMjUtMTcxNTYvMjUiLCJ0eXBlIjoiY29tcGFueSIsImlhdCI6MTc2MTEzMTM3NywiZXhwIjoxNzY4OTA3Mzc3fQ.fQp_CW9PGmoAesg_1rM-jva6KFON0QhIOSeYmbLGeao"}'
+        body: '{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyZWdpc3RyYXRpb25ObyI6IkZMMjEvUFNFQi8yMDI2LzI1Mzg2IiwidHlwZSI6ImZyZWVsYW5jZXIiLCJpYXQiOjE3Nzc4ODU3MTQsImV4cCI6MTc4NTY2MTcxNH0.aNkTbTkwsatuA95aU3NVMjsy_7Bh6hoRJa0pLQDFXuw"}'
         form: {}
         headers:
             Content-Type:
@@ -25,16 +25,16 @@ interactions:
         proto_minor: 1
         transfer_encoding: []
         trailer: {}
-        content_length: 238
+        content_length: 234
         uncompressed: false
-        body: '{"message":"Certificate verified successfully","data":{"registrationNo":"Z-25-17156/25","type":"company","iat":1761131377,"exp":1768907377,"name":"OUTSENTIA (PRIVATE) LIMITED","validFrom":"Oct 2025","validTill":"Sep 2026","isValid":true}}'
+        body: '{"message":"Certificate verified successfully","data":{"registrationNo":"FL21/PSEB/2026/25386","type":"freelancer","iat":1777885714,"exp":1785661714,"name":"Mubeen Ghauri","validFrom":"May 2026","validTill":"Apr 2027","isValid":true}}'
         headers:
             Access-Control-Allow-Credentials:
                 - "true"
             Connection:
                 - keep-alive
             Content-Length:
-                - "238"
+                - "234"
             Content-Security-Policy:
                 - 'default-src ''self'';script-src ''self'';script-src-attr ''none'';style-src ''self'' ''unsafe-inline'';img-src ''self'' data: https://portal.techdestination.com https://master.techdestination.com https://portal.pandagizmo.com https://master.pandagizmo.com;connect-src ''self'' wss://portal.techdestination.com wss://master.techdestination.com wss://portal.pandagizmo.com wss://master.pandagizmo.com https://portal.techdestination.com https://master.techdestination.com https://portal.pandagizmo.com https://master.pandagizmo.com;font-src ''self'' data:;object-src ''none'';frame-src ''self'' https://www.youtube.com https://player.vimeo.com;worker-src ''self'';frame-ancestors ''self'' https://portal.techdestination.com https://master.techdestination.com https://portal.pandagizmo.com https://master.pandagizmo.com;base-uri ''self'';form-action ''self'';upgrade-insecure-requests'
             Content-Type:
@@ -44,9 +44,9 @@ interactions:
             Cross-Origin-Resource-Policy:
                 - same-origin
             Date:
-                - Wed, 08 Jul 2026 21:58:40 GMT
+                - Wed, 08 Jul 2026 21:58:42 GMT
             Etag:
-                - W/"ee-ugsL2xnOQUOP3YLwRsejQdyywfI"
+                - W/"ea-bEfV0i6tRqzBbBxSZFFom7eEUGo"
             Origin-Agent-Cluster:
                 - ?1
             Referrer-Policy:
@@ -71,4 +71,4 @@ interactions:
                 - "0"
         status: 200 OK
         code: 200
-        duration: 995.443ms
+        duration: 350.658ms

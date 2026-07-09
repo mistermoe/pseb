@@ -36,7 +36,7 @@ func main() {
     fmt.Printf("Registration: %s\n", cert.RegistrationNumber)
     fmt.Printf("Type:         %s\n", cert.Type)
     fmt.Printf("Issued:       %s\n", cert.IssuedAt.Format("2006-01-02"))
-    fmt.Printf("Expires:      %s\n", cert.ExpiresAt.Format("2006-01-02"))
+    fmt.Printf("JWT expiry:   %s\n", cert.JWTExpiresAt.Format("2006-01-02")) // token, not the registration expiry
     fmt.Printf("JWT:          %s\n", cert.JWT)
 }
 ```
@@ -75,6 +75,7 @@ package main
 
 import (
     "context"
+    "errors"
     "fmt"
     "log"
     "os"
@@ -94,18 +95,53 @@ func main() {
         log.Fatalf("failed to extract certificate: %v", err)
     }
 
-    // Confirm it with PSEB.
+    // Confirm it with PSEB. Verify returns ErrCertificateInvalid (with a
+    // populated result) when PSEB reports the certificate as not valid.
     client := pseb.New()
     result, err := client.Verify(context.Background(), cert.JWT)
-    if err != nil {
+    switch {
+    case errors.Is(err, pseb.ErrCertificateInvalid):
+        fmt.Printf("%s is NOT currently valid\n", result.Name)
+    case err != nil:
         log.Fatalf("failed to verify certificate: %v", err)
+    default:
+        fmt.Printf("%s is a registered PSEB software exporter\n", result.Name)
+    }
+}
+```
+
+### Extract the CNIC (freelancer certificates)
+
+The CNIC printed on a freelancer certificate is not part of the QR code, the JWT, or the verification response. `ExtractCNIC` reads it from the PDF's text layer.
+
+```go
+package main
+
+import (
+    "errors"
+    "fmt"
+    "log"
+    "os"
+
+    "github.com/mistermoe/pseb"
+)
+
+func main() {
+    pdf, err := os.ReadFile("pseb_freelancer_cert.pdf")
+    if err != nil {
+        log.Fatalf("failed to read certificate: %v", err)
     }
 
-    if result.IsValid {
-        fmt.Printf("%s is a registered PSEB software exporter\n", result.Name)
-    } else {
-        fmt.Printf("%s is NOT currently valid\n", result.Name)
+    cnic, err := pseb.ExtractCNIC(pdf)
+    if err != nil {
+        if errors.Is(err, pseb.ErrNoCNIC) {
+            fmt.Println("no CNIC printed on this certificate")
+            return
+        }
+        log.Fatalf("failed to extract CNIC: %v", err)
     }
+
+    fmt.Printf("CNIC: %s\n", cnic)
 }
 ```
 
@@ -135,20 +171,24 @@ func main() {
     switch cert.Type {
     case pseb.CertificateTypeCompany:
         fmt.Println("This is a company registration")
-    case pseb.CertificateTypeIndividual:
-        fmt.Println("This is an individual/freelancer registration")
+    case pseb.CertificateTypeFreelancer:
+        fmt.Println("This is a freelancer registration")
     default:
         fmt.Printf("Unknown registration type: %s\n", cert.Type)
     }
 }
 ```
 
-### Check Whether a Certificate Has Expired
+### Check When a Registration Expires
+
+The JWT's `exp` claim (`cert.JWTExpiresAt`) is a short-lived (~90-day) token expiry, **not** the registration's validity end. The registration's real expiry is only reported by the portal, so use `Verify` and read `RegistrationExpiresAt`.
 
 ```go
 package main
 
 import (
+    "context"
+    "errors"
     "fmt"
     "log"
     "os"
@@ -165,17 +205,21 @@ func main() {
         log.Fatalf("failed to extract certificate: %v", err)
     }
 
-    if time.Now().After(cert.ExpiresAt) {
-        fmt.Printf("Certificate expired on %s\n", cert.ExpiresAt.Format("2006-01-02"))
-    } else {
-        remaining := time.Until(cert.ExpiresAt)
-        fmt.Printf("Certificate valid for %d more days\n", int(remaining.Hours()/24))
+    result, err := pseb.New().Verify(context.Background(), cert.JWT)
+    if err != nil && !errors.Is(err, pseb.ErrCertificateInvalid) {
+        log.Fatalf("failed to verify certificate: %v", err)
+    }
+
+    fmt.Printf("Valid through: %s\n", result.ValidTill) // e.g. "Apr 2027"
+
+    if !result.RegistrationExpiresAt.IsZero() && time.Now().After(result.RegistrationExpiresAt) {
+        fmt.Println("Registration has expired")
     }
 }
 ```
 
 :::note
-Local expiry is a claim from the JWT and is not authoritative. For a definitive answer, use `Verify` and check `IsValid`.
+For a definitive answer on whether a certificate is currently valid, rely on `result.IsValid` (PSEB's own check). `RegistrationExpiresAt` is derived from PSEB's coarse "Mon YYYY" `ValidTill` label, so it is month-precision only.
 :::
 
 ### Output as JSON

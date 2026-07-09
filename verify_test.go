@@ -2,6 +2,7 @@ package pseb_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/mistermoe/httpr"
@@ -32,6 +33,16 @@ func TestVerify(t *testing.T) {
 		assert.Equal(t, "OUTSENTIA (PRIVATE) LIMITED", res.Name)
 		assert.True(t, res.IsValid)
 		assert.False(t, res.IssuedAt.IsZero())
-		assert.False(t, res.ExpiresAt.IsZero())
+		assert.False(t, res.JWTExpiresAt.IsZero())
+		assert.Equal(t, "Sep 2026", res.ValidTill)
+		assert.Equal(t, time.Date(2026, time.September, 1, 0, 0, 0, 0, time.UTC), res.RegistrationExpiresAt)
+	})
+}
+
+func TestVerifyFreelancer(t *testing.T) {
+	vcr.Test(t, testMode, bootstrap, func(t *testing.T, client *pseb.Client, _ vcr.Cassette) {
+		vector := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyZWdpc3RyYXRpb25ObyI6IkZMMjEvUFNFQi8yMDI2LzI1Mzg2IiwidHlwZSI6ImZyZWVsYW5jZXIiLCJpYXQiOjE3Nzc4ODU3MTQsImV4cCI6MTc4NTY2MTcxNH0.aNkTbTkwsatuA95aU3NVMjsy_7Bh6hoRJa0pLQDFXuw"
+		_, err := client.Verify(t.Context(), vector)
+		assert.NoError(t, err)
 	})
 }
