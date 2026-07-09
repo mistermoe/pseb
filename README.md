@@ -13,7 +13,7 @@ Every PSEB registration certificate is issued as a PDF that carries a QR code.
 That QR code encodes a verification URL whose final path segment is a signed [JSON Web Token (JWT)](https://datatracker.ietf.org/doc/html/rfc7519). The JWT's claims contain the certificate's core data:
 
 - the registration number
-- the registration type (company or individual/freelancer)
+- the registration type (company or freelancer)
 - issued-at
 - expires-at
 
@@ -27,7 +27,7 @@ This library lets you:
 The QR encodes a URL of the form `https://portal.techdestination.com/verify-certificate/<jwt>`. The JWT's claims include:
 
 - `registrationNo` — the PSEB registration number (e.g. `Z-25-17156/25`)
-- `type` — the registration type (`company` or individual/freelancer)
+- `type` — the registration type (`company` or `freelancer`)
 - `iat` — the issued-at timestamp
 - `exp` — the expiry timestamp
 
@@ -68,7 +68,7 @@ func main() {
 
 	fmt.Printf("Registration: %s\n", cert.RegistrationNumber)
 	fmt.Printf("Type:         %s\n", cert.Type)
-	fmt.Printf("Expires:      %s\n", cert.ExpiresAt.Format("2006-01-02"))
+	fmt.Printf("Token expiry: %s\n", cert.JWTExpiresAt.Format("2006-01-02"))
 
 	// Verify the certificate against the PSEB portal.
 	client := pseb.New()
@@ -78,6 +78,7 @@ func main() {
 	}
 
 	fmt.Printf("Registered to: %s (valid: %t)\n", result.Name, result.IsValid)
+	fmt.Printf("Registration expires: %s\n", result.RegistrationExpiresAt.Format("2006-01-02"))
 }
 ```
 
@@ -112,7 +113,9 @@ type Certificate struct {
 	RegistrationNumber        string          `json:"registration_number"`
 	Type                      CertificateType `json:"type"`
 	IssuedAt                  time.Time       `json:"issued_at"`
-	ExpiresAt                 time.Time       `json:"expires_at"`
+	// Expiry of the verification token (~90-day lifetime), NOT the
+	// registration's expiry. Use VerificationResult.RegistrationExpiresAt for that.
+	JWTExpiresAt time.Time `json:"jwt_expires_at"`
 }
 
 type VerificationResult struct {
@@ -120,7 +123,10 @@ type VerificationResult struct {
 	Type               CertificateType `json:"type"`
 	Name               string          `json:"name"`
 	IssuedAt           time.Time       `json:"issued_at"`
-	ExpiresAt          time.Time       `json:"expires_at"`
+	JWTExpiresAt       time.Time       `json:"jwt_expires_at"`     // verification token expiry
+	ValidFrom          string          `json:"valid_from"`         // e.g. "May 2026" (as reported by PSEB)
+	ValidTill          string          `json:"valid_till"`         // e.g. "Apr 2027" (as reported by PSEB)
+	RegistrationExpiresAt time.Time    `json:"registration_expires_at"` // ValidTill parsed to a timestamp (month granularity)
 	IsValid            bool            `json:"is_valid"`
 }
 ```
